@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, interactive-widget=overlays-content">
+<title>Create Order</title>
+<link rel="stylesheet" href="style.css">
+<link rel="manifest" href="manifest.json">
+<style>
+    /* Native Success Popup Styling (Non-Clickable Cover) */
+    .success-popup-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.75);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 99999;
+        pointer-events: auto;
+    }
+    .success-popup-content {
+        background: #ffffff;
+        color: #333333;
+        padding: 25px 30px;
+        border-radius: 15px;
+        text-align: center;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        max-width: 85%;
+        width: 320px;
+        animation: popupPop 0.3s ease-out forwards;
+    }
+    .success-popup-content h3 {
+        margin: 0 0 10px 0;
+        color: #2ecc71;
+        font-size: 20px;
+    }
+    .success-popup-content p {
+        margin: 0;
+        font-size: 15px;
+        font-weight: 500;
+        line-height: 1.4;
+    }
+    @keyframes popupPop {
+        0 { transform: scale(0.8); opacity: 0; }
+        100 { transform: scale(1); opacity: 1; }
+    }
+    
+    /* Live Inventory Qty Styling */
+    .inventory-inline-qty {
+        width: 45px !important;
+        height: 26px !important;
+        background: rgba(255, 255, 255, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.4) !important;
+        color: #ffffff !important;
+        border-radius: 6px !important;
+        text-align: center !important;
+        font-weight: bold !important;
+        font-size: 14px !important;
+        margin-left: auto !important;
+        margin-right: 10px !important;
+        display: none;
+        outline: none !important;
+    }
+    .light-mode .inventory-inline-qty {
+        background: rgba(0, 0, 0, 0.08) !important;
+        border: 1px solid rgba(0, 0, 0, 0.2) !important;
+        color: #000000 !important;
+    }
+
+    /* Print Number Hand-Drawn Sketch Overlay Modal */
+    .print-modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(8px);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 100000;
+        padding: 15px;
+    }
+    .print-modal-box {
+        background: #1e1e24;
+        border: 1.5px solid rgba(255, 255, 255, 0.2);
+        border-radius: 18px;
+        padding: 18px;
+        width: 100%;
+        max-width: 350px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+        color: #fff;
+    }
+    .light-mode .print-modal-box {
+        background: #ffffff;
+        border-color: rgba(0, 0, 0, 0.15);
+        color: #000;
+    }
+    .print-modal-box h3 {
+        margin: 0 0 14px 0;
+        font-size: 14px;
+        text-align: center;
+        color: #64b5f6;
+        font-weight: 600;
+    }
+    .print-rows-container {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        max-height: 280px;
+        overflow-y: auto;
+    }
+    .print-row-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 6px 8px;
+        border-radius: 8px;
+    }
+    .light-mode .print-row-item {
+        background: rgba(0, 0, 0, 0.04);
+    }
+    .print-field-group {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        flex: 1;
+    }
+    .print-field-group label {
+        font-size: 11px;
+        opacity: 0.8;
+        white-space: nowrap;
+    }
+    .print-field-group input {
+        width: 100%;
+        height: 32px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 6px;
+        color: inherit;
+        text-align: center;
+        font-size: 13px;
+        outline: none;
+    }
+    .light-mode .print-field-group input {
+        background: #fff;
+        border-color: rgba(0, 0, 0, 0.2);
+    }
+    .print-modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    .print-modal-btn {
+        flex: 1;
+        height: 38px;
+        border: none;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+    .print-modal-btn.confirm {
+        background: #2ecc71;
+        color: #fff;
+    }
+    .print-modal-btn.cancel {
+        background: rgba(255, 255, 255, 0.2);
+        color: inherit;
+    }
+
+    /* Sub-items in Cart View Styling */
+    .cart-sub-item-block {
+        margin-left: 10px;
+        padding-left: 8px;
+        border-left: 2px solid #3498db;
+        margin-top: 6px;
+        margin-bottom: 10px;
+    }
+    .cart-sub-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        margin-bottom: 4px;
+    }
+    .cart-sub-controls {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .cart-sub-controls input {
+        width: 42px;
+        height: 26px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        color: inherit;
+        text-align: center;
+        font-size: 12px;
+    }
+    .cart-sub-del-btn {
+        background: rgba(231, 76, 60, 0.2);
+        border: 1px solid #e74c3c;
+        color: #e74c3c;
+        border-radius: 4px;
+        padding: 2px 6px;
+        cursor: pointer;
+        font-size: 11px;
+    }
+
+    /* Clean Cart Total Summary Layout Fix */
+    .cart-total-summary {
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        align-items: stretch !important;
+        padding: 12px 15px !important;
+    }
+    .cart-total-summary .submit-area-box {
+        width: 100%;
+        display: flex;
+    }
+    .cart-total-summary .submit-area-box button {
+        width: 100%;
+        margin: 0;
+    }
+    .cart-total-summary .cart-qty-text-box {
+        font-size: 14px;
+        font-weight: 600;
+        text-align: center;
+        word-break: break-all;
+        padding: 6px 10px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+    }
+    .cart-total-summary .cart-qty-text-box span {
+        word-break: break-all;
+        display: block;
+    }
+    .light-mode .cart-total-summary .cart-qty-text-box {
+        background: rgba(0, 0, 0, 0.04);
+        border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    /* Bottom Bar Total Quantity Box Perfect Alignment & Styling */
+    .bottom-bar .summary small {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        flex: 1;
+        margin-left: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        padding: 6px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-sizing: border-box;
+    }
+    .light-mode .bottom-bar .summary small {
+        background: rgba(0, 0, 0, 0.03);
+        border-color: rgba(0, 0, 0, 0.1);
+    }
+</style>
+</head>
+<body>
+
+<!-- Welcome Name & City Combined Modal with Matching Gradient Background -->
+<div id="welcomeNameModalOverlay" class="contacts-modal-overlay" style="display: flex; background: linear-gradient(135deg, #5E0000 0%, #FF6332 100%) !important; backdrop-filter: blur(10px);">
+    <div class="contacts-modal-content" style="background: rgba(28, 38, 54, 0.95); border: 1px solid rgba(255, 255, 255, 0.12); box-shadow: 0 15px 35px rgba(0,0,0,0.5);">
+        <h3 style="font-size: 18px; margin-bottom: 12px; color: #ffffff;">Enter Your Details</h3>
+        
+        <div style="margin-bottom: 12px; text-align: left;">
+            <label style="font-size: 12px; opacity: 0.8; margin-left: 4px; display: block; margin-bottom: 4px; color: #ffffff;">Enter Your Name</label>
+            <div class="party-box" style="margin-bottom: 0;">
+                <input type="text" id="createdByNameInput" placeholder="Apna Naam Yahan Likhe..." style="text-align: center;">
+            </div>
+        </div>
+
+        <div style="margin-bottom: 16px; text-align: left;">
+            <label style="font-size: 12px; opacity: 0.8; margin-left: 4px; display: block; margin-bottom: 4px; color: #ffffff;">Enter your City Name</label>
+            <div class="party-box" style="margin-bottom: 0;">
+                <input type="text" id="welcomeCityNameInput" placeholder="City Name Yahan Likhe..." style="text-align: center;">
+            </div>
+        </div>
+
+        <button id="submitWelcomeNameBtn" class="contact-btn" style="background: #007aff; box-shadow: 0 4px 10px rgba(0, 122, 255, 0.2); width: auto; padding: 10px 40px; display: inline-block;">
+            Okay
+        </button>
+    </div>
+</div>
+
+<!-- Non-Clickable Order Success Screen Popup -->
+<div id="orderSuccessPopupOverlay" class="success-popup-overlay">
+    <div class="success-popup-content">
+        <h3>🚀 Order Generated!</h3>
+        <p id="successPopupMessage">Order Generated Successfully Shukria</p>
+    </div>
+</div>
+
+<!-- DYNAMIC MULTI-PRINT MODAL OVERLAY (SKETCH IMPLEMENTATION) -->
+<div id="printModalOverlay" class="print-modal-overlay">
+    <div class="print-modal-box">
+        <h3 id="modalItemTitle">Write your design number and Quantity</h3>
+        <div id="printRowsContainer" class="print-rows-container">
+            <!-- 5 Dynamic Input Rows -->
+        </div>
+        <div class="print-modal-actions">
+            <button type="button" class="print-modal-btn cancel" onclick="cancelPrintModal()">Cancel</button>
+            <button type="button" class="print-modal-btn confirm" onclick="savePrintModal()">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<div class="aspect-ratio-container">
+    <div class="app">
+        <div class="logo-box">
+            <img src="logo.png" alt="Logo">
+            <hr class="logo-line">
+            <div class="header-toggle-group">
+                <h1>Create Order</h1>
+                <a href="https://youtube.com/shorts/kqv9SH4BMeg?si=10ECEY3g8ltO6La-" target="_blank" class="how-to-order-link">
+                    آرڈر بنانے کا طریقہ
+                </a>
+                <button id="themeToggleBtn" class="theme-toggle-btn" title="Toggle Theme">🌙</button>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <input type="text" id="search" placeholder="Search Item...">
+        </div>
+
+        <h2>Inventory</h2>
+        <div id="itemList"></div>
+
+        <div class="app-footer">
+            <h3 class="footer-brand">Ahmad Glassware</h3>
+            <div class="footer-about">
+                یہ پورٹل آسانی کے لیے ہے۔ صرف سیلز اسٹاف، ڈسٹریبیوٹرز، اور ڈیلرز کے لیے ٹائم سیونگ ٹول ہے۔ اس کا یو آئی (UI) سمپل اور کلین ہے۔
+            </div>
+            <div class="footer-meta">Order Management System</div>
+            <div class="footer-meta">Version 2.3</div>
+            <div class="footer-meta">Released on 19-06-2026</div>
+            <div class="footer-dev">
+                Developed By <a href="#" id="adminPageLink" onclick="event.preventDefault(); alert('Admin page setup will be integrated here later.');">Hassaan Matloob</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <div class="summary">
+            <div class="action-area">
+                <button id="viewCartBtn">View Cart 🛒</button>
+            </div>
+            <small>
+                <span style="font-size: 11px; font-weight: 600; opacity: 0.9;">Total Items Quantity</span>
+                <input type="number" id="totalQtyDisplay" value="0" min="0" readonly style="background: transparent; border: none; color: inherit; text-align: center; font-weight: bold; font-size: 15px; width: 100%; height: 24px; pointer-events: none; box-sizing: border-box; outline: none;">
+            </small>
+        </div>
+    </div>
+
+    <div id="fullCartPage" class="full-cart-popup">
+        <div class="cart-header">
+            <h2>🛒 Your Cart</h2>
+            <button id="closeCartPage">← Back</button>
+        </div>
+        <div id="fullCartItemsList"></div>
+        
+        <div class="cart-total-summary">
+            <div class="submit-area-box">
+                <button id="generateOrderBtn" class="generate-order-main-btn">Generate Order 🚀</button>
+            </div>
+            <div class="cart-qty-text-box">
+                Total Quantity: <span id="cartTotalQty" style="font-weight: 700;">0</span>
+            </div>
+        </div>
+
+        <div id="contactsModalOverlay" class="contacts-modal-overlay" style="display: none;">
+            <div class="contacts-modal-content">
+                <h3>Select WhatsApp Contact</h3>
+                <div class="contacts-buttons-wrapper">
+                    <button id="btnUmer" class="contact-btn red-apple" onclick="processOrderCounter('923234669795')">
+                        Umer Matloob (Red Apple)
+                    </button>
+                    <button id="btnHassaan" class="contact-btn orange-apple" onclick="processOrderCounter('923214950399')">
+                        Hassaan Matloob (Orange)
+                    </button>
+                </div>
+                <button id="closeContactsModal" class="close-modal-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="script.js"></script>
+
+<script>
+    // --- PRINT DATA STORAGE ---
+    let printStore = {}; 
+    let activePrintItemDom = null;
+
+    // --- AUTO HIDE HEADER LOGO WITH SMART SMOOTH SCROLL ---
+    const searchInputField = document.getElementById('search');
+    const targetLogoBox = document.querySelector('.logo-box');
+    const targetHeading = document.querySelector('h2');
+    const mainAppScroll = document.querySelector('.app');
+
+    if (searchInputField && targetLogoBox && targetHeading && mainAppScroll) {
+        searchInputField.addEventListener('focus', () => {
+            targetLogoBox.style.setProperty('display', 'none', 'important');
+            targetHeading.style.setProperty('display', 'none', 'important');
+            searchInputField.parentElement.style.marginTop = '0px';
+            searchInputField.parentElement.style.marginBottom = '10px';
+            
+            setTimeout(() => {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+                mainAppScroll.scrollTop = 0;
+            }, 50);
+        });
+
+        searchInputField.addEventListener('blur', () => {
+            setTimeout(() => {
+                targetLogoBox.style.setProperty('display', 'block', 'important');
+                targetHeading.style.setProperty('display', 'block', 'important');
+                searchInputField.parentElement.style.marginTop = '';
+                searchInputField.parentElement.style.marginBottom = '12px';
+            }, 180);
+        });
+    }
+
+    // Modal Operations for Print Selection
+    function openPrintModalForItem(itemDom) {
+        activePrintItemDom = itemDom;
+        const container = document.getElementById('printRowsContainer');
+        container.innerHTML = '';
+
+        const itemKey = getItemKey(itemDom);
+        const existingPrints = printStore[itemKey] || [];
+
+        for (let i = 0; i < 5; i++) {
+            const printVal = existingPrints[i] ? existingPrints[i].printNo : '';
+            const qtyVal = existingPrints[i] ? existingPrints[i].qty : '0';
+
+            const rowDiv = document.createElement('div');
+            rowDiv.className = 'print-row-item';
+            rowDiv.innerHTML = `
+                <div class="print-field-group">
+                    <label>Print number</label>
+                    <input type="text" class="input-print-no" value="${printVal}">
+                </div>
+                <div class="print-field-group">
+                    <label>Quantity</label>
+                    <input type="number" class="input-print-qty" value="${qtyVal}" min="0">
+                </div>
+            `;
+            
+            const qtyInput = rowDiv.querySelector('.input-print-qty');
+            qtyInput.addEventListener('input', function() {
+                this.value = this.value.replace(/[^0-9]/g, '');
+            });
+
+            container.appendChild(rowDiv);
+        }
+
+        document.getElementById('printModalOverlay').style.display = 'flex';
+    }
+
+    function cancelPrintModal() {
+        document.getElementById('printModalOverlay').style.display = 'none';
+        if (activePrintItemDom) {
+            const itemKey = getItemKey(activePrintItemDom);
+            if (!printStore[itemKey] || printStore[itemKey].length === 0) {
+                const cb = activePrintItemDom.querySelector('.item-checkbox');
+                if (cb) {
+                    cb.checked = false;
+                    triggerCheckboxState(activePrintItemDom, false);
+                }
+            }
+        }
+        activePrintItemDom = null;
+    }
+
+    function savePrintModal() {
+        if (!activePrintItemDom) return;
+
+        const rowElements = document.querySelectorAll('#printRowsContainer .print-row-item');
+        const validPrints = [];
+
+        rowElements.forEach(row => {
+            const printNo = row.querySelector('.input-print-no').value.trim();
+            const qtyInputVal = row.querySelector('.input-print-qty').value;
+            const qty = parseInt(qtyInputVal, 10);
+
+            if (printNo !== "" && !isNaN(qty) && qty > 0) {
+                validPrints.push({ printNo: printNo, qty: qty });
+            }
+        });
+
+        const itemKey = getItemKey(activePrintItemDom);
+
+        if (validPrints.length > 0) {
+            printStore[itemKey] = validPrints;
+            const totalQty = validPrints.reduce((sum, p) => sum + p.qty, 0);
+            
+            const inlineQtyInput = activePrintItemDom.querySelector('.inventory-inline-qty');
+            if (inlineQtyInput) inlineQtyInput.value = totalQty;
+            const qtySpan = activePrintItemDom.querySelector('.qty');
+            if (qtySpan) qtySpan.innerText = totalQty;
+        } else {
+            delete printStore[itemKey];
+            const cb = activePrintItemDom.querySelector('.item-checkbox');
+            if (cb) {
+                cb.checked = false;
+                triggerCheckboxState(activePrintItemDom, false);
+            }
+        }
+
+        document.getElementById('printModalOverlay').style.display = 'none';
+        calculateTotalTickItems();
+        activePrintItemDom = null;
+    }
+
+    function getItemKey(itemDom) {
+        return itemDom.querySelector('.item-name').innerText.trim();
+    }
+
+    function triggerCheckboxState(itemDom, isChecked) {
+        const inlineQty = itemDom.querySelector('.inventory-inline-qty');
+        const qtySpan = itemDom.querySelector('.qty');
+        if (isChecked) {
+            if(inlineQty) {
+                inlineQty.style.display = 'block';
+                inlineQty.value = '0';
+            }
+            if (qtySpan) qtySpan.innerText = "0";
+            itemDom.style.setProperty('background', 'rgba(46, 204, 113, 0.25)', 'important');
+        } else {
+            if(inlineQty) {
+                inlineQty.style.display = 'none';
+                inlineQty.value = '0';
+            }
+            if (qtySpan) qtySpan.innerText = "0";
+            itemDom.style.removeProperty('background');
+        }
+        calculateTotalTickItems();
+    }
+
+    function processOrderCounter(phoneNumber) {
+        const selectedCity = localStorage.getItem('selectedCityName') || "";
+        const currentUserName = localStorage.getItem('createdByName') || "Default";
+
+        const successMsgElement = document.getElementById("successPopupMessage");
+        if(successMsgElement) {
+            successMsgElement.innerHTML = `Order Generated Successfully<br>Shukria <b>"${currentUserName}"</b>`;
+        }
+        document.getElementById("orderSuccessPopupOverlay").style.display = "flex";
+
+        let orderDetailsText = `*Order Details*\nSent By: ${currentUserName}\nCity: ${selectedCity}\n\n`;
+        
+        const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+        let grandTotalQty = 0;
+        let itemIndex = 1;
+
+        checkedBoxes.forEach((cb) => {
+            const parentItem = cb.closest('.item');
+            let rawName = parentItem.querySelector('.item-name').innerText.trim();
+            const itemKey = getItemKey(parentItem);
+
+            if (rawName.toLowerCase().includes("select your print number") || printStore[itemKey]) {
+                let cleanBaseName = rawName.replace(/\(Select Your Print Number\)/gi, '').trim();
+                const prints = printStore[itemKey] || [];
+                const totalQty = prints.reduce((acc, p) => acc + p.qty, 0);
+
+                grandTotalQty += totalQty;
+                orderDetailsText += `${itemIndex}. ${cleanBaseName}: (Qty: ${totalQty})\n`;
+                prints.forEach(p => {
+                    orderDetailsText += `   Print No: ${p.printNo} | Qty: ${p.qty}\n`;
+                });
+            } else {
+                const qtySpan = parentItem.querySelector('.qty');
+                const itemQty = parseInt(qtySpan ? qtySpan.innerText.trim() : "0", 10) || 0;
+
+                grandTotalQty += itemQty;
+                orderDetailsText += `${itemIndex}. ${rawName}: (Qty: ${itemQty})\n`;
+            }
+            itemIndex++;
+        });
+
+        orderDetailsText += `Total Items Quantity = ${grandTotalQty}`;
+
+        const whatsappUrl = `https://api.whatsapp.com/send?phone=${phoneNumber}&text=${encodeURIComponent(orderDetailsText)}`;
+        
+        setTimeout(() => {
+            window.open(whatsappUrl, '_blank');
+            document.getElementById('orderSuccessPopupOverlay').style.display = 'none';
+            document.getElementById('contactsModalOverlay').style.display = 'none';
+            document.getElementById('fullCartPage').style.display = 'none';
+        }, 600);
+    }
+
+    const welcomeModal = document.getElementById('welcomeNameModalOverlay');
+    const nameInput = document.getElementById('createdByNameInput');
+    const cityNameInputModal = document.getElementById('welcomeCityNameInput');
+    const submitNameBtn = document.getElementById('submitWelcomeNameBtn');
+
+    submitNameBtn.addEventListener('click', () => {
+        const trimmedName = nameInput.value.trim();
+        const trimmedCity = cityNameInputModal.value.trim();
+
+        if (trimmedName === "") {
+            alert("براہ کرم آگے بڑھنے کے لیے اپنا نام درج کریں۔");
+            nameInput.focus();
+        } else if (trimmedCity === "") {
+            alert("براہ کرم شہر کا نام درج کریں۔");
+            cityNameInputModal.focus();
+        } else {
+            localStorage.setItem('createdByName', trimmedName);
+            localStorage.setItem('selectedCityName', trimmedCity);
+            welcomeModal.style.display = 'none';
+        }
+    });
+
+    const themeToggleBtn = document.getElementById('themeToggleBtn');
+    const container = document.querySelector('.aspect-ratio-container');
+
+    themeToggleBtn.addEventListener('click', () => {
+        if (container.classList.contains('light-mode')) {
+            container.classList.remove('light-mode');
+            themeToggleBtn.innerText = '🌙';
+        } else {
+            container.classList.add('light-mode');
+            themeToggleBtn.innerText = '☀️';
+        }
+    });
+
+    const inventoryObserver = new MutationObserver(() => { setupCheckboxes(); });
+    const targetInventory = document.getElementById('itemList');
+    if(targetInventory) {
+        inventoryObserver.observe(targetInventory, { childList: true, subtree: true });
+        setupCheckboxes(); 
+    }
+
+    function setupCheckboxes() {
+        const items = document.querySelectorAll('.item');
+        items.forEach((itemDom) => {
+            if (!itemDom.querySelector('.item-checkbox')) {
+                const inlineQty = document.createElement('input');
+                inlineQty.type = 'text';
+                inlineQty.inputMode = 'numeric';
+                inlineQty.className = 'inventory-inline-qty';
+                inlineQty.value = '0';
+                
+                inlineQty.addEventListener('input', function() {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                    const currentVal = this.value === "" ? "0" : this.value;
+                    const qtySpan = itemDom.querySelector('.qty');
+                    if (qtySpan) qtySpan.innerText = currentVal;
+                    
+                    if(parseInt(currentVal) > 0) {
+                        inlineQty.style.borderColor = '#2ecc71';
+                    } else {
+                        inlineQty.style.removeProperty('border-color');
+                    }
+                    calculateTotalTickItems();
+                });
+
+                const checkWrapper = document.createElement('div');
+                checkWrapper.className = 'item-checkbox-wrapper';
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'item-checkbox';
+                
+                checkbox.addEventListener('change', function() {
+                    const itemName = itemDom.querySelector('.item-name').innerText;
+                    
+                    if (this.checked) {
+                        if (itemName.toLowerCase().includes("select your print number")) {
+                            openPrintModalForItem(itemDom);
+                        } else {
+                            triggerCheckboxState(itemDom, true);
+                        }
+                    } else {
+                        const itemKey = getItemKey(itemDom);
+                        delete printStore[itemKey];
+                        triggerCheckboxState(itemDom, false);
+                    }
+                });
+                
+                itemDom.appendChild(inlineQty);
+                checkWrapper.appendChild(checkbox);
+                itemDom.appendChild(checkWrapper);
+            }
+        });
+    }
+
+    function calculateTotalTickItems() {
+        const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+        let totalQty = 0;
+        checkedBoxes.forEach((cb) => {
+            const parentItem = cb.closest('.item');
+            const itemName = parentItem.querySelector('.item-name').innerText;
+            const itemKey = getItemKey(parentItem);
+            
+            if (itemName.toLowerCase().includes("select your print number") || printStore[itemKey]) {
+                const prints = printStore[itemKey] || [];
+                totalQty += prints.reduce((sum, p) => sum + p.qty, 0);
+            } else {
+                const inlineQtyInput = parentItem.querySelector('.inventory-inline-qty');
+                if(inlineQtyInput) {
+                    totalQty += parseInt(inlineQtyInput.value) || 0;
+                }
+            }
+        });
+        const qtyDisplayInput = document.getElementById('totalQtyDisplay');
+        if (qtyDisplayInput) { qtyDisplayInput.value = totalQty; }
+    }
+
+    document.getElementById('viewCartBtn').addEventListener('click', function() {
+        renderCartItems();
+        document.getElementById('fullCartPage').style.display = 'flex';
+    });
+
+    function renderCartItems() {
+        const fullCartList = document.getElementById('fullCartItemsList');
+        fullCartList.innerHTML = '';
+        const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+        
+        if (checkedBoxes.length === 0) {
+            fullCartList.innerHTML = '<div class="empty-cart-msg" style="text-align: center; padding: 40px 10px; font-weight: bold;">Apka Cart Khali Hai! Pehle items Select karein.</div>';
+            updateCartTotalQty();
+        } else {
+            checkedBoxes.forEach((cb) => {
+                const parentItem = cb.closest('.item');
+                const rawName = parentItem.querySelector('.item-name').innerText;
+                const itemKey = getItemKey(parentItem);
+                
+                const row = document.createElement('div');
+                row.className = 'cart-dynamic-item-row';
+                row.style.flexDirection = 'column';
+                row.style.alignItems = 'stretch';
+
+                if (rawName.toLowerCase().includes("select your print number") || printStore[itemKey]) {
+                    let cleanBaseName = rawName.replace(/\(Select Your Print Number\)/gi, '').trim();
+                    const prints = printStore[itemKey] || [];
+                    const totalQty = prints.reduce((acc, p) => acc + p.qty, 0);
+
+                    let subRowsHTML = '';
+                    prints.forEach((p, idx) => {
+                        subRowsHTML += `
+                            <div class="cart-sub-row">
+                                <span>Print No: <b>${p.printNo}</b></span>
+                                <div class="cart-sub-controls">
+                                    <span>Qty:</span>
+                                    <input type="number" value="${p.qty}" min="0" onchange="updateCartSubQty('${itemKey}', ${idx}, this.value)">
+                                    <button type="button" class="cart-sub-del-btn" onclick="deleteCartSubRow('${itemKey}', ${idx})">✕</button>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    row.innerHTML = `
+                        <div style="display: flex; justify-content: space-between; align-items: center; font-weight: bold; font-size: 14px;">
+                            <span>${cleanBaseName} (Qty: <span id="cart-item-total-${itemKey}">${totalQty}</span>)</span>
+                            <button class="cart-delete-btn" onclick="deleteEntireCartItem('${itemKey}')">🗑️ Delete All</button>
+                        </div>
+                        <div class="cart-sub-item-block">
+                            ${subRowsHTML}
+                        </div>
+                    `;
+                } else {
+                    const origQty = parentItem.querySelector('.qty') ? parentItem.querySelector('.qty').innerText : "0";
+                    const initialQty = origQty !== "" ? origQty : "0";
+
+                    row.style.flexDirection = 'row';
+                    row.innerHTML = `
+                        <input type="text" class="cart-dynamic-name-input" value="${rawName}">
+                        <div class="cart-item-right-side-group">
+                            <input type="text" inputmode="numeric" pattern="[0-9]*" class="cart-dynamic-qty-input" value="${initialQty}">
+                            <button class="cart-delete-btn" title="Delete Item">🗑️</button>
+                        </div>
+                    `;
+
+                    const qtyInput = row.querySelector('.cart-dynamic-qty-input');
+                    qtyInput.addEventListener('input', function() {
+                        this.value = this.value.replace(/[^0-9]/g, '');
+                        const syncValue = this.value === "" ? "0" : this.value;
+                        const qtySpan = parentItem.querySelector('.qty');
+                        if(qtySpan) qtySpan.innerText = syncValue;
+                        
+                        const inlineQtyInput = parentItem.querySelector('.inventory-inline-qty');
+                        if(inlineQtyInput) inlineQtyInput.value = syncValue;
+                        
+                        updateCartTotalQty();
+                        calculateTotalTickItems();
+                    });
+
+                    row.querySelector('.cart-delete-btn').addEventListener('click', function() {
+                        cb.checked = false;
+                        triggerCheckboxState(parentItem, false);
+                        row.remove();
+                        calculateTotalTickItems();
+                        updateCartTotalQty();
+                    });
+                }
+
+                fullCartList.appendChild(row);
+            });
+            updateCartTotalQty();
+        }
+    }
+
+    function updateCartSubQty(itemKey, idx, newQty) {
+        const parsed = parseInt(newQty, 10);
+        if (!isNaN(parsed) && parsed >= 0) {
+            printStore[itemKey][idx].qty = parsed;
+        } else {
+            deleteCartSubRow(itemKey, idx);
+            return;
+        }
+        syncPrintStoreToItem(itemKey);
+        renderCartItems();
+    }
+
+    function deleteCartSubRow(itemKey, idx) {
+        if (printStore[itemKey]) {
+            printStore[itemKey].splice(idx, 1);
+            if (printStore[itemKey].length === 0) {
+                deleteEntireCartItem(itemKey);
+                return;
+            }
+        }
+        syncPrintStoreToItem(itemKey);
+        renderCartItems();
+    }
+
+    function deleteEntireCartItem(itemKey) {
+        delete printStore[itemKey];
+        const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+        checkedBoxes.forEach((cb) => {
+            const parentItem = cb.closest('.item');
+            if (getItemKey(parentItem) === itemKey) {
+                cb.checked = false;
+                triggerCheckboxState(parentItem, false);
+            }
+        });
+        renderCartItems();
+    }
+
+    function syncPrintStoreToItem(itemKey) {
+        const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+        checkedBoxes.forEach((cb) => {
+            const parentItem = cb.closest('.item');
+            if (getItemKey(parentItem) === itemKey) {
+                const prints = printStore[itemKey] || [];
+                const totalQty = prints.reduce((acc, p) => acc + p.qty, 0);
+                const inlineQty = parentItem.querySelector('.inventory-inline-qty');
+                if (inlineQty) inlineQty.value = totalQty;
+                const qtySpan = parentItem.querySelector('.qty');
+                if (qtySpan) qtySpan.innerText = totalQty;
+            }
+        });
+        calculateTotalTickItems();
+    }
+
+    function updateCartTotalQty() {
+        let total = 0;
+        const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+        checkedBoxes.forEach((cb) => {
+            const parentItem = cb.closest('.item');
+            const itemName = parentItem.querySelector('.item-name').innerText;
+            const itemKey = getItemKey(parentItem);
+
+            if (itemName.toLowerCase().includes("select your print number") || printStore[itemKey]) {
+                const prints = printStore[itemKey] || [];
+                total += prints.reduce((sum, p) => sum + p.qty, 0);
+            } else {
+                const inlineQty = parentItem.querySelector('.inventory-inline-qty');
+                if (inlineQty) {
+                    total += parseInt(inlineQty.value) || 0;
+                }
+            }
+        });
+        document.getElementById('cartTotalQty').innerText = total;
+    }
+
+    document.getElementById('generateOrderBtn').addEventListener('click', function() {
+        document.getElementById('contactsModalOverlay').style.display = 'flex';
+    });
+    document.getElementById('closeContactsModal').addEventListener('click', function() {
+        document.getElementById('contactsModalOverlay').style.display = 'none';
+    });
+    document.getElementById('closeCartPage').addEventListener('click', function() {
+        document.getElementById('fullCartPage').style.display = 'none';
+    });
+
+    // Security Controls
+    document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === "F12" || (e.ctrlKey && e.shiftKey && (e.key === "I" || e.key === "J")) || (e.ctrlKey && e.key === "U")) {
+            e.preventDefault();
+        }
+    });
+</script>
+</body>
+</html>
